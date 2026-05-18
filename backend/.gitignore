@@ -10,3 +10,7 @@ wheels/
 .venv
 
 /media/*
+
+/ai-model/Phobert_binary/*
+/ai-model/phobert_TSD/*
+/ai-model/phowhisper_ASR/*

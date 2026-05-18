@@ -73,3 +73,61 @@ class UploadApiTests(TestCase):
         self.assertEqual(payload['status'], ProcessingJob.Status.COMPLETED)
         self.assertEqual(payload['transcript'], 'xin chao')
         self.assertEqual(len(payload['toxic_spans']), 1)
+
+
+class TextAnalyzeApiTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    @patch('pipeline.views.analyze_text')
+    def test_analyze_comment_returns_binary_result(self, mocked_analyze_text):
+        mocked_analyze_text.return_value = {
+            'input_text': 'Ban co doc khong',
+            'processed_text': 'ban co doc khong',
+            'is_toxic': False,
+            'label': 'NONE',
+            'label_id': 0,
+            'confidence': 0.98,
+            'toxic_probability': 0.02,
+            'toxic_spans': [],
+            'has_toxic_spans': False,
+        }
+
+        response = self.client.post(
+            '/api/text/analyze/',
+            data='{"text":"Ban co doc khong","include_spans":false}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertFalse(payload['is_toxic'])
+        self.assertEqual(payload['label'], 'NONE')
+        mocked_analyze_text.assert_called_once_with('Ban co doc khong', include_spans=False)
+
+    @patch('pipeline.views.analyze_text')
+    def test_analyze_comment_with_spans(self, mocked_analyze_text):
+        mocked_analyze_text.return_value = {
+            'input_text': 'mày ngu quá',
+            'processed_text': 'mày ngu quá',
+            'is_toxic': True,
+            'label': 'TOXIC',
+            'label_id': 1,
+            'confidence': 0.97,
+            'toxic_probability': 0.97,
+            'toxic_spans': [
+                {'word': 'ngu', 'start': 4, 'end': 7, 'label': 'Toxic', 'score': 0.97},
+            ],
+            'has_toxic_spans': True,
+        }
+
+        response = self.client.post(
+            '/api/text/analyze/',
+            data='{"text":"mày ngu quá","include_spans":true}',
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['is_toxic'])
+        self.assertEqual(len(payload['toxic_spans']), 1)

@@ -3,6 +3,7 @@ export type ToxicSpan = {
   start: number
   end: number
   label: string
+  score?: number
 }
 
 export type JobResponse = {
@@ -17,6 +18,18 @@ export type JobResponse = {
   error_message: string
   created_at: string
   updated_at: string
+}
+
+export type TextAnalysisResponse = {
+  input_text: string
+  processed_text: string
+  is_toxic: boolean
+  label: 'NONE' | 'TOXIC'
+  label_id: number
+  confidence: number
+  toxic_probability: number
+  toxic_spans: ToxicSpan[]
+  has_toxic_spans: boolean
 }
 
 const API_BASE =
@@ -44,6 +57,26 @@ export async function fetchJobStatus(jobId: string): Promise<JobResponse> {
 
   if (!response.ok) {
     throw new Error('Cannot fetch processing status')
+  }
+
+  return response.json()
+}
+
+export async function analyzeText(
+  text: string,
+  includeSpans = false,
+): Promise<TextAnalysisResponse> {
+  const response = await fetch(`${API_BASE}/text/analyze/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ text, include_spans: includeSpans }),
+  })
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: 'Analysis failed' }))
+    throw new Error(body.error ?? 'Analysis failed')
   }
 
   return response.json()

@@ -6,7 +6,7 @@ from django.core.files import File
 
 from pipeline.models import ProcessingJob
 from pipeline.services.audio import extract_audio
-from pipeline.services.inference import detect_toxic_spans, transcribe_audio
+from pipeline.services.inference import analyze_media_file
 
 
 def process_job(job_id: str) -> None:
@@ -29,21 +29,16 @@ def process_job(job_id: str) -> None:
         with extracted_path.open('rb') as audio_fp:
             job.audio_file.save(extracted_path.name, File(audio_fp), save=False)
 
-        job.progress_message = 'Running speech-to-text...'
+        job.progress_message = 'Running ASR, binary classification and span detection...'
         job.save(update_fields=['audio_file', 'progress_message', 'updated_at'])
 
-        transcript = transcribe_audio(job.audio_file.path)
-
-        job.progress_message = 'Detecting toxic words...'
-        job.transcript = transcript
-        job.save(update_fields=['progress_message', 'transcript', 'updated_at'])
-
-        toxic_spans = detect_toxic_spans(transcript)
+        analysis = analyze_media_file(job.audio_file.path)
 
         job.status = ProcessingJob.Status.COMPLETED
         job.progress_message = 'Completed'
-        job.toxic_spans = toxic_spans
-        job.save(update_fields=['status', 'progress_message', 'toxic_spans', 'updated_at'])
+        job.transcript = analysis['transcript']
+        job.toxic_spans = analysis['toxic_spans']
+        job.save(update_fields=['status', 'progress_message', 'transcript', 'toxic_spans', 'updated_at'])
 
         if should_cleanup and extracted_path.exists():
             extracted_path.unlink(missing_ok=True)

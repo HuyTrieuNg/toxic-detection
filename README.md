@@ -32,9 +32,3 @@ pnpm dev
 
 - `POST /api/jobs/upload/`
 - `GET /api/jobs/<job_id>/`
-
-## Trạng thái hiện tại
-
-- Đã hoàn thiện flow upload + polling + tách audio video/audio.
-- Inference đang là mock để phục vụ debug trên máy không GPU.
-- Có thể thay mock ASR/TSD bằng model thật mà không đổi API contract.
